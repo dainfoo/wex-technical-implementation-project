@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	domain2 "github.com/dainfoo/wex-technical-implementation-project/internal/core/domain"
+	"github.com/dainfoo/wex-technical-implementation-project/internal/core/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// This file contains tests for the transaction domain model. It uses Table Driven Tests to test different scenarios.
+// This file contains tests for the Transaction domain model. It uses Table Driven Tests to test different scenarios.
 // It uses Testify for assertions and runs the tests in parallel.
 
 // TestNewTransaction tests the NewTransaction constructor function. It tests the following scenarios:
@@ -18,86 +18,63 @@ import (
 // 1. Valid Transaction.
 // 2. Empty Description.
 // 3. Description Too Long.
-// 4. Negative Amount.
-// 5. Empty Timestamp.
-// 6. Invalid Timestamp Format (gibberish).
-// 7. Invalid Timestamp Format (Unix Timestamp).
-// 8. Correct Format But Future Timestamp.
+// 4. Negative Amount In USD.
+// 5. Correct Format But Future Timestamp.
 func TestNewTransaction(t *testing.T) {
 	tests := []struct {
 		name                string
 		description         string
-		timestampString     string
-		amount              float64
+		timestamp           time.Time
+		amountInUSD         float64
 		expectedErrors      []error
-		expectedTransaction *domain2.Transaction
+		expectedTransaction *domain.Transaction
 	}{
 		{
-			name:            "Valid Transaction",
-			description:     "Valid Transaction",
-			timestampString: time.Now().UTC().Format(time.RFC3339),
-			amount:          100.50,
-			expectedErrors:  []error{},
-			expectedTransaction: &domain2.Transaction{
+			name:           "Valid Transaction",
+			description:    "Valid Transaction",
+			timestamp:      time.Now().UTC(),
+			amountInUSD:    500.50,
+			expectedErrors: []error{},
+			expectedTransaction: &domain.Transaction{
 				Description: "Valid Transaction",
-				AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(100.50),
+				Timestamp:   time.Now().UTC(),
+				AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(500.50),
 			},
 		},
 		{
-			name:            "Empty Description",
-			description:     "",
-			timestampString: time.Now().UTC().Format(time.RFC3339),
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrDescriptionEmpty},
+			name:           "Empty Description",
+			description:    "",
+			timestamp:      time.Now().UTC(),
+			amountInUSD:    100.0,
+			expectedErrors: []error{domain.ErrDescriptionEmpty},
 		},
 		{
-			name:            "Description Too Long",
-			description:     "This description is way too long and should trigger a validation error",
-			timestampString: time.Now().UTC().Format(time.RFC3339),
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrDescriptionTooLong},
+			name:           "Description Too Long",
+			description:    "This description is way too long and should trigger a validation error",
+			timestamp:      time.Now().UTC(),
+			amountInUSD:    250.0,
+			expectedErrors: []error{domain.ErrDescriptionTooLong},
 		},
 		{
-			name:            "Negative Amount",
-			description:     "Negative Amount",
-			timestampString: time.Now().UTC().Format(time.RFC3339),
-			amount:          -50.0,
-			expectedErrors:  []error{domain2.ErrInvalidAmount},
+			name:           "Negative Amount In USD",
+			description:    "Negative Amount In USD",
+			timestamp:      time.Now().UTC(),
+			amountInUSD:    -50.0,
+			expectedErrors: []error{domain.ErrInvalidAmountInUSD},
 		},
 		{
-			name:            "Empty Timestamp",
-			description:     "Empty Timestamp",
-			timestampString: "",
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrTimestampEmpty},
-		},
-		{
-			name:            "Invalid Timestamp Format (gibberish)",
-			description:     "Invalid Timestamp Format (gibberish)",
-			timestampString: "not-a-timestamp",
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrInvalidTimestampFormat},
-		},
-		{
-			name:            "Invalid Timestamp Format (Unix Timestamp)",
-			description:     "Invalid Timestamp Format (Unix Timestamp)",
-			timestampString: "1617181723",
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrInvalidTimestampFormat},
-		},
-		{
-			name:            "Correct Format But Future Timestamp",
-			description:     "Correct Format But Future Timestamp",
-			timestampString: time.Now().Add(24 * time.Hour).Format(time.RFC3339),
-			amount:          100.0,
-			expectedErrors:  []error{domain2.ErrInvalidTimestamp},
+			name:           "Correct Format But Future Timestamp",
+			description:    "Correct Format But Future Timestamp",
+			timestamp:      time.Now().Add(24 * time.Hour),
+			amountInUSD:    499.0,
+			expectedErrors: []error{domain.ErrInvalidTimestamp},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			transaction, errs := domain2.NewTransaction(tt.description, tt.timestampString, tt.amount)
+			transaction, errs := domain.NewTransaction(tt.description, tt.timestamp, tt.amountInUSD)
 
 			// Check expected errors
 			if len(tt.expectedErrors) > 0 {
@@ -114,9 +91,9 @@ func TestNewTransaction(t *testing.T) {
 			if len(tt.expectedErrors) == 0 {
 				require.NotNil(t, transaction)
 				assert.Equal(t, tt.expectedTransaction.Description, transaction.Description)
+				assert.True(t, transaction.Timestamp.Before(time.Now().Add(time.Second)))
 				assert.Equal(t, tt.expectedTransaction.AmountInUSD.Cmp(transaction.AmountInUSD), 0)
 				assert.NotZero(t, transaction.ID)
-				assert.True(t, transaction.Timestamp.Before(time.Now().Add(time.Second)))
 			} else {
 				assert.Nil(t, transaction)
 			}
@@ -143,19 +120,19 @@ func TestValidateDescription(t *testing.T) {
 		{
 			name:           "Empty Description",
 			description:    "",
-			expectedErrors: []error{domain2.ErrDescriptionEmpty},
+			expectedErrors: []error{domain.ErrDescriptionEmpty},
 		},
 		{
 			name:           "Description Too Long",
 			description:    "This description is way too long and should trigger a validation error",
-			expectedErrors: []error{domain2.ErrDescriptionTooLong},
+			expectedErrors: []error{domain.ErrDescriptionTooLong},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			errs := domain2.ValidateDescription(tt.description)
+			errs := domain.ValidateDescription(tt.description)
 
 			// Check expected errors
 			if len(tt.expectedErrors) > 0 {
@@ -170,38 +147,38 @@ func TestValidateDescription(t *testing.T) {
 	}
 }
 
-// TestValidateAmount tests the ValidateAmount function. It tests the following scenarios:
+// TestValidateAmountInUSD tests the ValidateAmountInUSD function. It tests the following scenarios:
 //
-// 1. Valid Amount.
-// 2. Zero Amount.
-// 3. Negative Amount.
-func TestValidateAmount(t *testing.T) {
+// 1. Valid Amount In USD.
+// 2. Zero Amount In USD.
+// 3. Negative Amount In USD.
+func TestValidateAmountInUSD(t *testing.T) {
 	tests := []struct {
 		name           string
-		amount         float64
+		amountInUSD    float64
 		expectedErrors []error
 	}{
 		{
-			name:           "Valid Amount",
-			amount:         10.5,
+			name:           "Valid Amount In USD",
+			amountInUSD:    10.5,
 			expectedErrors: []error{},
 		},
 		{
-			name:           "Zero Amount",
-			amount:         0.0,
-			expectedErrors: []error{domain2.ErrInvalidAmount},
+			name:           "Zero Amount In USD",
+			amountInUSD:    0.0,
+			expectedErrors: []error{domain.ErrInvalidAmountInUSD},
 		},
 		{
-			name:           "Negative Amount",
-			amount:         -5.0,
-			expectedErrors: []error{domain2.ErrInvalidAmount},
+			name:           "Negative Amount In USD",
+			amountInUSD:    -5.0,
+			expectedErrors: []error{domain.ErrInvalidAmountInUSD},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			errs := domain2.ValidateAmount(tt.amount)
+			errs := domain.ValidateAmountInUSD(tt.amountInUSD)
 
 			// Check expected errors
 			if len(tt.expectedErrors) > 0 {
@@ -211,108 +188,6 @@ func TestValidateAmount(t *testing.T) {
 				}
 			} else {
 				assert.Empty(t, errs)
-			}
-		})
-	}
-}
-
-// TestParseAndValidateTimestamp tests the ParseAndValidateTimestamp function. It tests the following scenarios:
-//
-// 1. Valid Timestamp.
-// 2. Empty Timestamp.
-// 3. Invalid Timestamp Format (gibberish).
-// 4. Invalid Timestamp Format (Unix Timestamp).
-// 5. Correct Format But Future Timestamp.
-func TestParseAndValidateTimestamp(t *testing.T) {
-	tests := []struct {
-		name            string
-		timestampString string
-		expectedErrors  []error
-	}{
-		{
-			name:            "Valid Timestamp",
-			timestampString: time.Now().UTC().Format(time.RFC3339),
-			expectedErrors:  []error{},
-		},
-		{
-			name:            "Empty Timestamp",
-			timestampString: "",
-			expectedErrors:  []error{domain2.ErrTimestampEmpty},
-		},
-		{
-			name:            "Invalid Timestamp Format (gibberish)",
-			timestampString: "not-a-timestamp",
-			expectedErrors:  []error{domain2.ErrInvalidTimestampFormat},
-		},
-		{
-			name:            "Invalid Timestamp Format (Unix Timestamp)",
-			timestampString: "1617181723",
-			expectedErrors:  []error{domain2.ErrInvalidTimestampFormat},
-		},
-		{
-			name:            "Correct Format But Future Timestamp",
-			timestampString: time.Now().Add(24 * time.Hour).Format(time.RFC3339),
-			expectedErrors:  []error{domain2.ErrInvalidTimestamp},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			_, errs := domain2.ParseAndValidateTimestamp(tt.timestampString)
-
-			// Check expected errors
-			if len(tt.expectedErrors) > 0 {
-				require.Len(t, errs, len(tt.expectedErrors))
-				for i, expectedError := range tt.expectedErrors {
-					assert.ErrorIs(t, errs[i], expectedError)
-				}
-			} else {
-				assert.Empty(t, errs)
-			}
-		})
-	}
-}
-
-// TestParseISO8601Timestamp tests the ParseISO8601Timestamp function. It tests the following scenarios:
-//
-// 1. Valid Timestamp.
-// 2. Empty Timestamp.
-// 3. Invalid Timestamp Format (Unix Timestamp).
-func TestParseISO8601Timestamp(t *testing.T) {
-	tests := []struct {
-		name            string
-		timestampString string
-		expected        time.Time
-		expectError     bool
-	}{
-		{
-			name:            "Valid Timestamp",
-			timestampString: "2023-01-01T12:00:00Z",
-			expected:        time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
-			expectError:     false,
-		},
-		{
-			name:            "Empty Timestamp",
-			timestampString: "",
-			expectError:     true,
-		},
-		{
-			name:            "Invalid Timestamp Format (Unix Timestamp)",
-			timestampString: "1617181723",
-			expectError:     true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			parsedTimestamp, err := domain2.ParseISO8601Timestamp(tt.timestampString)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, parsedTimestamp)
 			}
 		})
 	}
@@ -361,7 +236,7 @@ func TestRoundToTwoDecimalPlaces(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			actual := domain2.RoundToTwoDecimalPlaces(tt.input)
+			actual := domain.RoundToTwoDecimalPlaces(tt.input)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
