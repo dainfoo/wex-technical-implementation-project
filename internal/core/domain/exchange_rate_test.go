@@ -16,70 +16,70 @@ import (
 // TestNewExchangeRate tests the NewExchangeRate constructor function. It tests the following scenarios:
 //
 // 1. Valid Exchange Rate.
-// 2. Empty Currency.
+// 2. Empty Currency Name.
 // 3. Negative Rate.
 // 4. Rate Zero.
-// 5. Future Date.
-// 6. Valid Exchange Rate With Current Date.
+// 5. Future Date Of Record.
+// 6. Valid Exchange Rate With Current Date Of Record.
 func TestNewExchangeRate(t *testing.T) {
 	tests := []struct {
 		name                 string
-		currency             string
+		currencyName         string
 		rate                 float64
-		date                 time.Time
+		dateOfRecord         time.Time
 		expectedErrors       []error
 		expectedExchangeRate *domain.ExchangeRate
 	}{
 		{
 			name:           "Valid Exchange Rate",
-			currency:       "Brazil-Real",
+			currencyName:   "Brazil-Real",
 			rate:           5.434,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{},
 			expectedExchangeRate: &domain.ExchangeRate{
-				Currency: "Brazil-Real",
-				Rate:     new(big.Float).SetFloat64(5.434),
-				Date:     time.Now(),
+				CurrencyName: "Brazil-Real",
+				Rate:         new(big.Float).SetFloat64(5.434),
+				DateOfRecord: time.Now(),
 			},
 		},
 		{
-			name:           "Empty Currency",
-			currency:       "",
+			name:           "Empty Currency Name",
+			currencyName:   "",
 			rate:           1.2,
-			date:           time.Now(),
-			expectedErrors: []error{domain.ErrCurrencyEmpty},
+			dateOfRecord:   time.Now(),
+			expectedErrors: []error{domain.ErrCurrencyNameEmpty},
 		},
 		{
 			name:           "Negative Rate",
-			currency:       "Brazil-Real",
+			currencyName:   "Brazil-Real",
 			rate:           -5.434,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{domain.ErrInvalidExchangeRate},
 		},
 		{
 			name:           "Rate Zero",
-			currency:       "Brazil-Real",
+			currencyName:   "Brazil-Real",
 			rate:           0,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{domain.ErrInvalidExchangeRate},
 		},
 		{
-			name:           "Future Date",
-			currency:       "Brazil-Real",
+			name:           "Future Date Of Record",
+			currencyName:   "Brazil-Real",
 			rate:           5.434,
-			date:           time.Now().Add(24 * time.Hour),
-			expectedErrors: []error{domain.ErrInvalidDate},
+			dateOfRecord:   time.Now().Add(24 * time.Hour),
+			expectedErrors: []error{domain.ErrInvalidDateOfRecord},
 		},
 		{
-			name:           "Valid Exchange Rate With Current Date",
-			currency:       "Brazil-Real",
+			name:           "Valid Exchange Rate With Current Date Of Record",
+			currencyName:   "Brazil-Real",
 			rate:           5.434,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{},
 			expectedExchangeRate: &domain.ExchangeRate{
-				Currency: "Brazil-Real",
-				Rate:     new(big.Float).SetFloat64(5.434),
-				Date:     time.Now(),
+				CurrencyName: "Brazil-Real",
+				Rate:         new(big.Float).SetFloat64(5.434),
+				DateOfRecord: time.Now(),
 			},
 		},
 	}
@@ -87,7 +87,7 @@ func TestNewExchangeRate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			exchangeRate, errs := domain.NewExchangeRate(tt.currency, tt.rate, tt.date)
+			exchangeRate, errs := domain.NewExchangeRate(tt.currencyName, tt.rate, tt.dateOfRecord)
 
 			// Check expected errors
 			if len(tt.expectedErrors) > 0 {
@@ -103,9 +103,9 @@ func TestNewExchangeRate(t *testing.T) {
 			// Check the exchange rate fields only if no errors where expected
 			if len(tt.expectedErrors) == 0 {
 				require.NotNil(t, exchangeRate)
-				assert.Equal(t, tt.expectedExchangeRate.Currency, exchangeRate.Currency)
+				assert.Equal(t, tt.expectedExchangeRate.CurrencyName, exchangeRate.CurrencyName)
 				assert.Equal(t, tt.expectedExchangeRate.Rate.Cmp(exchangeRate.Rate), 0)
-				assert.True(t, exchangeRate.Date.Before(time.Now().Add(time.Second)))
+				assert.True(t, exchangeRate.DateOfRecord.Before(time.Now().Add(time.Second)))
 			} else {
 				assert.Nil(t, exchangeRate)
 			}
@@ -116,52 +116,52 @@ func TestNewExchangeRate(t *testing.T) {
 // TestValidateExchangeRate tests the ValidateExchangeRate function. It tests the following scenarios:
 //
 // 1. Valid Exchange Rate.
-// 2. Empty Currency.
+// 2. Empty Currency Name.
 // 3. Negative Rate.
 // 4. Rate Zero.
-// 5. Future Date.
+// 5. Future Date Of Record.
 func TestValidateExchangeRate(t *testing.T) {
 	tests := []struct {
 		name           string
-		currency       string
+		currencyName   string
 		rate           float64
-		date           time.Time
+		dateOfRecord   time.Time
 		expectedErrors []error
 	}{
 		{
 			name:           "Valid Exchange Rate",
-			currency:       "United Kingdom-Pound",
+			currencyName:   "United Kingdom-Pound",
 			rate:           0.745,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{},
 		},
 		{
-			name:           "Empty Currency",
-			currency:       "",
+			name:           "Empty Currency Name",
+			currencyName:   "",
 			rate:           1.2,
-			date:           time.Now(),
-			expectedErrors: []error{domain.ErrCurrencyEmpty},
+			dateOfRecord:   time.Now(),
+			expectedErrors: []error{domain.ErrCurrencyNameEmpty},
 		},
 		{
 			name:           "Negative Rate",
-			currency:       "United Kingdom-Pound",
+			currencyName:   "United Kingdom-Pound",
 			rate:           -0.745,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{domain.ErrInvalidExchangeRate},
 		},
 		{
 			name:           "Rate Zero",
-			currency:       "United Kingdom-Pound",
+			currencyName:   "United Kingdom-Pound",
 			rate:           0,
-			date:           time.Now(),
+			dateOfRecord:   time.Now(),
 			expectedErrors: []error{domain.ErrInvalidExchangeRate},
 		},
 		{
-			name:           "Future Date",
-			currency:       "United Kingdom-Pound",
+			name:           "Future Date Of Record",
+			currencyName:   "United Kingdom-Pound",
 			rate:           0.745,
-			date:           time.Now().Add(24 * time.Hour),
-			expectedErrors: []error{domain.ErrInvalidDate},
+			dateOfRecord:   time.Now().Add(24 * time.Hour),
+			expectedErrors: []error{domain.ErrInvalidDateOfRecord},
 		},
 	}
 
@@ -169,7 +169,7 @@ func TestValidateExchangeRate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			errs := domain.ValidateExchangeRate(tt.currency, tt.rate, tt.date)
+			errs := domain.ValidateExchangeRate(tt.currencyName, tt.rate, tt.dateOfRecord)
 
 			// Check expected errors
 			assert.ElementsMatch(t, tt.expectedErrors, errs)
