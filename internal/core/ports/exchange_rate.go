@@ -9,5 +9,5 @@ import (
 // ExchangeRateService is the interface that the business logic provides for any adapter that wants to implement
 // exchange rate retrieval.
 type ExchangeRateService interface {
-	GetExchangeRate(currencyName string) (*domain.ExchangeRate, error)
+	GetExchangeRates(currencyName string) ([]*domain.ExchangeRate, error)
 }

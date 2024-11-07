@@ -97,8 +97,8 @@ func (suite *TransactionServiceIntegrationTestSuite) TestFindTransactionAndExcha
 				err := suite.transactionRepo.SaveTransaction(*tt.setupTransaction)
 				suite.NoError(err)
 			}
-			suite.exchangeAdapter.On("GetExchangeRate", tt.currencyName).
-				Return(tt.mockRate, tt.mockRateErr)
+			suite.exchangeAdapter.On("GetExchangeRates", tt.currencyName).
+				Return([]*domain.ExchangeRate{tt.mockRate}, tt.mockRateErr)
 
 			foundTransaction, exchangeRate, err := suite.service.FindTransactionAndExchangeRateFromCurrency(tt.transactionID, tt.currencyName)
 
