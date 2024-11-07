@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,10 +9,14 @@ import (
 	"time"
 
 	"github.com/dainfoo/wex-technical-implementation-project/internal/core/domain"
+	"github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
 )
 
 // This file contains the implementation of the ExchangeRateService	interface using the Treasury API.
+
+// Activate the jsoniter library to decode the Treasury API response.
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // TreasuryExchangeRateAdapter interface defines the behavior for exchange rates fetching.
 // It allows flexibility to change the implementation of the Treasury API client for testing purposes.

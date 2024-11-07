@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,11 +8,15 @@ import (
 
 	"github.com/dainfoo/wex-technical-implementation-project/internal/core/domain"
 	"github.com/google/uuid"
+	"github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/bbolt"
 )
 
 // This file contains the implementation of the TransactionRepository interface using BoltDB.
+
+// Activate the jsoniter library to decode the Treasury API response.
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // TransactionRepositoryBoltDB represents a BoltDB database with a bucket name to store transactions
 // and a mutex to manage concurrent access to the database.

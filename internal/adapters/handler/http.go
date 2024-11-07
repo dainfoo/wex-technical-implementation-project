@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -16,10 +15,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
 	"github.com/google/uuid"
+	"github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
 )
 
 // This file contains the HTTP handler for transactions.
+
+// Activate the jsoniter library to decode the Treasury API response.
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // TransactionHandler holds the resources needed to handle HTTP requests for transactions.
 type TransactionHandler struct {
