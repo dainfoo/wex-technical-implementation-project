@@ -15,10 +15,10 @@ import (
 
 // This file contains the implementation of the ExchangeRateService	interface using the Treasury API.
 
-// TreasuryExchangeRateAdapter interface defines the behavior for exchange rate fetching.
+// TreasuryExchangeRateAdapter interface defines the behavior for exchange rates fetching.
 // It allows flexibility to change the implementation of the Treasury API client for testing purposes.
 type TreasuryExchangeRateAdapter interface {
-	GetExchangeRate(currency string) (*domain.ExchangeRate, error)
+	GetExchangeRates(currencyName string) ([]*domain.ExchangeRate, error)
 }
 
 // HTTPClient just wraps te http.Client interface to make it easier to mock in tests.
@@ -47,8 +47,8 @@ func NewConcreteTreasuryExchangeRateAdapter(client HTTPClient) *ConcreteTreasury
 	}
 }
 
-// GetExchangeRate retrieves the most recent exchange rate for a currency with input and response validations.
-func (a *ConcreteTreasuryExchangeRateAdapter) GetExchangeRate(currencyName string) (*domain.ExchangeRate, error) {
+// GetExchangeRates retrieves all the exchange rates for a currency with input and response validations.
+func (a *ConcreteTreasuryExchangeRateAdapter) GetExchangeRates(currencyName string) ([]*domain.ExchangeRate, error) {
 	apiURL := buildRequestURL(a, currencyName)
 
 	// Retry mechanism
@@ -60,11 +60,12 @@ func (a *ConcreteTreasuryExchangeRateAdapter) GetExchangeRate(currencyName strin
 			break
 		}
 		if attempt < maxRetries-1 {
-			log.Warn().Err(err).Msg("retrying request due to transient network issue")
+			log.Warn().Err(err).Int("attempt", attempt+1).Msg("retrying request due to transient network issue")
 			time.Sleep(retryDelay)
 		}
 	}
 	if err != nil {
+		log.Error().Err(err).Msg("error fetching exchange rates from Treasury API")
 		return nil, ErrNetworkIssue
 	}
 
@@ -73,22 +74,22 @@ func (a *ConcreteTreasuryExchangeRateAdapter) GetExchangeRate(currencyName strin
 
 // buildRequestURL constructs the URL for the Treasury API request.
 func buildRequestURL(a *ConcreteTreasuryExchangeRateAdapter, currencyName string) string {
-	return fmt.Sprintf("%s?&sort=-record_date&format=json&page[number]=1&page[size]=1"+
+	return fmt.Sprintf("%s?&sort=-record_date&format=json&page[number]=1&page[size]=1000"+
 		"&fields=currency,exchange_rate,record_date,record_calendar_day,record_calendar_month,record_calendar_year"+
 		"&filter=currency:eq:%s", a.apiEndpoint, url.QueryEscape(currencyName))
 }
 
 // ProcessResponse reads the response from the Treasury API, validates it, and returns a result.
-// An ExchangeRate object and nil error if the response is valid. Otherwise, it returns a nil object and an error.
-func ProcessResponse(resp *http.Response, currencyName string) (*domain.ExchangeRate, error) {
+// An ExchangeRate slice and nil error if the response is valid. Otherwise, it returns a nil object and an error.
+func ProcessResponse(resp *http.Response, currencyName string) ([]*domain.ExchangeRate, error) {
 	// Checks the response status code after a successful request
 	if resp.StatusCode != http.StatusOK {
-		log.Warn().Int("status_code", resp.StatusCode).Str("currency", currencyName).Msg("unexpected API response")
+		log.Error().Int("status_code", resp.StatusCode).Str("currency", currencyName).Msg("unexpected API response")
 		return nil, ErrTreasuryAPIResponse
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			log.Error().Err(err).Msg("error closing response body")
 		}
 	}()
 
@@ -103,6 +104,7 @@ func ProcessResponse(resp *http.Response, currencyName string) (*domain.Exchange
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		log.Error().Err(err).Msg("error decoding API response")
 		return nil, ErrDecodingResponse
 	}
 
@@ -111,30 +113,36 @@ func ProcessResponse(resp *http.Response, currencyName string) (*domain.Exchange
 		return nil, ErrExchangeRateNotFound
 	}
 
-	// Parse and validate the date of record
-	dayOfRecord, monthOfRecord, yearOfRecord := data.Data[0].RecordDay, data.Data[0].RecordMonth, data.Data[0].RecordYear
-	dateOfRecord, err := ParseDateFromResponse(dayOfRecord, monthOfRecord, yearOfRecord)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrParsingExchangeRateDateOfRecord, err)
-	}
-
-	rate, err := strconv.ParseFloat(data.Data[0].ExchangeRate, 64)
-	if err != nil {
-		return nil, ErrInvalidExchangeRate
-	}
-
-	exchangeRate, errs := domain.NewExchangeRate(data.Data[0].Currency, rate, dateOfRecord)
-
-	// If there are errors, joins them into one and return
-	if len(errs) > 0 {
-		var errMessages []string
-		for _, e := range errs {
-			errMessages = append(errMessages, e.Error())
+	var exchangeRates []*domain.ExchangeRate
+	// Loops through all the data and parse each exchange rate
+	for _, item := range data.Data {
+		dayOfRecord, monthOfRecord, yearOfRecord := item.RecordDay, item.RecordMonth, item.RecordYear
+		dateOfRecord, err := ParseDateFromResponse(dayOfRecord, monthOfRecord, yearOfRecord)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing exchange rate date of record (day: %s, month: %s, year: %s): %w",
+				dayOfRecord, monthOfRecord, yearOfRecord, ErrParsingExchangeRateDateOfRecord)
 		}
-		return nil, fmt.Errorf("validation errors: %s", strings.Join(errMessages, ", "))
+
+		rate, err := strconv.ParseFloat(item.ExchangeRate, 64)
+		if err != nil {
+			return nil, ErrInvalidExchangeRate
+		}
+
+		exchangeRate, errs := domain.NewExchangeRate(item.Currency, rate, dateOfRecord)
+
+		// If there are errors, join them into one and return
+		if len(errs) > 0 {
+			var errMessages []string
+			for _, e := range errs {
+				errMessages = append(errMessages, e.Error())
+			}
+			return nil, fmt.Errorf("validation errors: %s", strings.Join(errMessages, ", "))
+		}
+
+		exchangeRates = append(exchangeRates, exchangeRate)
 	}
 
-	return exchangeRate, nil
+	return exchangeRates, nil
 }
 
 // ParseDateFromResponse takes day, month, and year of record as strings, validates them,

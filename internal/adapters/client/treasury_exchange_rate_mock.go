@@ -12,11 +12,11 @@ type MockTreasuryExchangeRateAdapter struct {
 	mock.Mock
 }
 
-// GetExchangeRate mocks the GetExchangeRate method of the TreasuryExchangeRateAdapter.
-func (m *MockTreasuryExchangeRateAdapter) GetExchangeRate(currency string) (*domain.ExchangeRate, error) {
-	args := m.Called(currency)
-	// Retrieves the values from the mocked call arguments.
-	return args.Get(0).(*domain.ExchangeRate), args.Error(1)
+// GetExchangeRates mocks the GetExchangeRates method of the TreasuryExchangeRateAdapter.
+func (m *MockTreasuryExchangeRateAdapter) GetExchangeRates(currencyName string) ([]*domain.ExchangeRate, error) {
+	args := m.Called(currencyName)
+	// Retrieves the values from the mocked call arguments (returns a slice of ExchangeRate objects)
+	return args.Get(0).([]*domain.ExchangeRate), args.Error(1)
 }
 
 // Get is a mock method for HTTPClient interface.

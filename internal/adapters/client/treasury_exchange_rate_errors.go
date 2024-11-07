@@ -24,7 +24,7 @@ var (
 	ErrInvalidExchangeRate = errors.New("invalid exchange rate value")
 
 	// ErrExchangeRateNotFound is returned when no exchange rate is found for the requested currency.
-	ErrExchangeRateNotFound = errors.New("no exchange rate found for the provided currency")
+	ErrExchangeRateNotFound = errors.New("no exchange rates found for the provided currency")
 
 	// ErrDecodingResponse is returned when the API response cannot be decoded into the expected format.
 	ErrDecodingResponse = errors.New("error decoding response from Treasury API")
