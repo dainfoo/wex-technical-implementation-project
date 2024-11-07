@@ -42,6 +42,7 @@ func NewTransactionRepositoryBoltDB(pathToDB string, bucketName string) (*Transa
 	// Open the BoltDB database file with read-write permissions or create it if it doesn't exist
 	boltDB, err := bbolt.Open(pathToDB, os.FileMode(0666), nil)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to create of open the database file")
 		return nil, ErrCreateOpenDatabaseFile
 	}
 
@@ -51,6 +52,7 @@ func NewTransactionRepositoryBoltDB(pathToDB string, bucketName string) (*Transa
 		return err
 	})
 	if err != nil {
+		log.Error().Err(err).Msg("failed to create the bucket")
 		return nil, ErrCreateBucket
 	}
 
