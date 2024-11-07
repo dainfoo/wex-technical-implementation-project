@@ -1,7 +1,6 @@
 package repository_test
 
 import (
-	"math/big"
 	"math/rand"
 	"os"
 	"sync"
@@ -30,6 +29,11 @@ import (
 // 6. Heavy Write Scenario.
 // 7. Heavy Read/Write Scenario.
 func TestTransactionBoltDBRepository(t *testing.T) {
+	// Reusable test Transaction
+	testTransaction, err := domain.NewTransaction("giberish", time.Now(), 100.50)
+	// Stops the test if the expected results are not as expected (probably the business logic changed)
+	require.Empty(t, err)
+
 	// Create a temporary BoltDB database file for testing
 	tempDBPath := "testdata/transaction_test.db"
 
@@ -64,22 +68,15 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 			require.NoError(t, err, "failed to close the repository")
 		}()
 
-		// Creates a test transaction
-		transaction := domain.Transaction{
-			ID:          uuid.New(),
-			AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(100.50),
-			Timestamp:   time.Now(),
-		}
-
-		err = repo.SaveTransaction(transaction)
+		err = repo.SaveTransaction(*testTransaction)
 		require.NoError(t, err)
 
-		retrievedTransaction, err := repo.FindTransaction(transaction.ID)
+		retrievedTransaction, err := repo.FindTransaction(testTransaction.ID)
 		require.NoError(t, err)
 		require.NotNil(t, retrievedTransaction)
-		assert.Equal(t, transaction.ID, retrievedTransaction.ID)
-		assert.Equal(t, transaction.AmountInUSD, retrievedTransaction.AmountInUSD)
-		assert.Equal(t, transaction.Timestamp.UTC(), retrievedTransaction.Timestamp.UTC())
+		assert.Equal(t, testTransaction.ID, retrievedTransaction.ID)
+		assert.Equal(t, testTransaction.AmountInUSD, retrievedTransaction.AmountInUSD)
+		assert.Equal(t, testTransaction.Timestamp.UTC(), retrievedTransaction.Timestamp.UTC())
 	})
 
 	t.Run("Retrieve Non-Existent Transaction", func(t *testing.T) {
@@ -119,14 +116,7 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Creates a test transaction
-		transaction := domain.Transaction{
-			ID:          uuid.New(),
-			AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(50),
-			Timestamp:   time.Now(),
-		}
-
-		err = repo.SaveTransaction(transaction)
+		err = repo.SaveTransaction(*testTransaction)
 		assert.ErrorIs(t, err, repository.ErrBucketNotFound)
 	})
 
@@ -139,13 +129,7 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 		repoFirstSession, err := repository.NewTransactionRepositoryBoltDB(tempDBPath, bucketName)
 		require.NoError(t, err)
 
-		// Creates a test transaction
-		transaction := domain.Transaction{
-			ID:          uuid.New(),
-			AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(75.25),
-			Timestamp:   time.Now(),
-		}
-		err = repoFirstSession.SaveTransaction(transaction)
+		err = repoFirstSession.SaveTransaction(*testTransaction)
 		require.NoError(t, err)
 		err = repoFirstSession.Close()
 		require.NoError(t, err, "failed to close the first repository")
@@ -158,9 +142,9 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 			require.NoError(t, err, "failed to close the second repository")
 		}()
 
-		retrievedTransaction, err := repoSecondSession.FindTransaction(transaction.ID)
+		retrievedTransaction, err := repoSecondSession.FindTransaction(testTransaction.ID)
 		require.NoError(t, err)
-		assert.Equal(t, transaction.AmountInUSD, retrievedTransaction.AmountInUSD)
+		assert.Equal(t, testTransaction.AmountInUSD, retrievedTransaction.AmountInUSD)
 	})
 
 	t.Run("Heavy Write Scenario", func(t *testing.T) {
@@ -186,12 +170,11 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 		// Write transactions concurrently
 		for i := 0; i < iterations; i++ {
 			// Creates a test transaction
-			transaction := domain.Transaction{
-				ID:          uuid.New(),
-				AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(domain.RoundToTwoDecimalPlaces(float64(i) + (rand.Float64() * 100))),
-				Timestamp:   time.Now(),
-			}
-			transactions[i] = transaction
+			transaction, err := domain.NewTransaction("giberish", time.Now(), float64(i)+(rand.Float64()*100))
+			// Stops the test if the expected results are not as expected (probably the business logic changed)
+			require.Empty(t, err)
+
+			transactions[i] = *transaction
 
 			wg.Add(1)
 			go func(transaction domain.Transaction) {
@@ -200,7 +183,7 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 				if err != nil {
 					writeErrChan <- err
 				}
-			}(transaction)
+			}(*transaction)
 		}
 
 		// Waits for all goroutines to finish
@@ -246,14 +229,12 @@ func TestTransactionBoltDBRepository(t *testing.T) {
 				defer wg.Done()
 
 				// Creates a test transaction
-				transaction := domain.Transaction{
-					ID:          uuid.New(),
-					AmountInUSD: new(big.Float).SetPrec(64).SetFloat64(domain.RoundToTwoDecimalPlaces(float64(i) + (rand.Float64() * 100))),
-					Timestamp:   time.Now(),
-				}
+				transaction, err := domain.NewTransaction("giberish", time.Now(), float64(i)+(rand.Float64()*100))
+				// Stops the test if the expected results are not as expected (probably the business logic changed)
+				require.Empty(t, err)
 
 				// Random write
-				if err := repo.SaveTransaction(transaction); err != nil {
+				if err := repo.SaveTransaction(*transaction); err != nil {
 					writeErrChan <- err
 					return
 				}

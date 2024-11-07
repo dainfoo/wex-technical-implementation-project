@@ -9,6 +9,7 @@ import (
 
 	"github.com/dainfoo/wex-technical-implementation-project/internal/core/domain"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"go.etcd.io/bbolt"
 )
 
@@ -34,6 +35,7 @@ func NewTransactionRepositoryBoltDB(pathToDB string, bucketName string) (*Transa
 	// Ensures the directory exists or create it if it doesn't
 	dir := filepath.Dir(pathToDB)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		log.Error().Err(err).Msg("failed to create database directory")
 		return nil, ErrDatabaseDirectoryCouldNotBeCreated
 	}
 
@@ -69,15 +71,29 @@ func (r *TransactionRepositoryBoltDB) SaveTransaction(transaction domain.Transac
 	return r.boltDB.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(r.bucketName))
 		if bucket == nil {
+			log.Error().
+				Str("bucket", r.bucketName).
+				Msg("bucket not found in BoltDB")
 			return ErrBucketNotFound
 		}
 
 		transactionJsonData, err := json.Marshal(transaction)
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("transaction_id", transaction.ID.String()).
+				Msg("failed to marshal transaction data")
 			return err
 		}
 
-		return bucket.Put([]byte(transaction.ID.String()), transactionJsonData)
+		err = bucket.Put([]byte(transaction.ID.String()), transactionJsonData)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("transaction_id", transaction.ID.String()).
+				Msg("failed to save the transaction")
+		}
+		return err
 	})
 }
 
@@ -92,15 +108,28 @@ func (r *TransactionRepositoryBoltDB) FindTransaction(id uuid.UUID) (*domain.Tra
 	err := r.boltDB.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(r.bucketName))
 		if bucket == nil {
+			log.Error().
+				Str("bucket", r.bucketName).
+				Msg("bucket not found in BoltDB")
 			return ErrBucketNotFound
 		}
 
 		transactionJsonData := bucket.Get([]byte(id.String()))
 		if transactionJsonData == nil {
+			log.Warn().
+				Str("transaction_id", id.String()).
+				Msg("transaction not found in BoltDB")
 			return ErrTransactionNotFound
 		}
 
-		return json.Unmarshal(transactionJsonData, &transaction)
+		err := json.Unmarshal(transactionJsonData, &transaction)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("transaction_id", id.String()).
+				Msg("failed to unmarshal transaction data")
+		}
+		return err
 	})
 	if err != nil {
 		return nil, err
