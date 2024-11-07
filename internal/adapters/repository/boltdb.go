@@ -82,7 +82,7 @@ func (r *TransactionRepositoryBoltDB) SaveTransaction(transaction domain.Transac
 			return ErrBucketNotFound
 		}
 
-		transactionJsonData, err := json.Marshal(transaction)
+		transactionJSONData, err := json.Marshal(transaction)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -91,7 +91,7 @@ func (r *TransactionRepositoryBoltDB) SaveTransaction(transaction domain.Transac
 			return err
 		}
 
-		err = bucket.Put([]byte(transaction.ID.String()), transactionJsonData)
+		err = bucket.Put([]byte(transaction.ID.String()), transactionJSONData)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -119,15 +119,15 @@ func (r *TransactionRepositoryBoltDB) FindTransaction(id uuid.UUID) (*domain.Tra
 			return ErrBucketNotFound
 		}
 
-		transactionJsonData := bucket.Get([]byte(id.String()))
-		if transactionJsonData == nil {
+		transactionJSONData := bucket.Get([]byte(id.String()))
+		if transactionJSONData == nil {
 			log.Warn().
 				Str("transaction_id", id.String()).
 				Msg("transaction not found in BoltDB")
 			return ErrTransactionNotFound
 		}
 
-		err := json.Unmarshal(transactionJsonData, &transaction)
+		err := json.Unmarshal(transactionJSONData, &transaction)
 		if err != nil {
 			log.Error().
 				Err(err).

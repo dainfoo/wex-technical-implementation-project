@@ -78,7 +78,7 @@ func (th *TransactionHandler) Routes() chi.Router {
 
 // SaveTransaction handles the POST request to save a new transaction.
 func (th *TransactionHandler) SaveTransaction(w http.ResponseWriter, r *http.Request) {
-	var data TransactionDTO = TransactionDTO{}
+	data := TransactionDTO{}
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		log.Warn().Err(err).Msg("invalid request payload")
@@ -226,7 +226,7 @@ func (th *TransactionHandler) ShutdownServer(server *http.Server) {
 // ParseAndValidateTimestamp checks if the provided timestamp string is not empty, parses it,
 // and ensures that the timestamp is not in the future.
 func ParseAndValidateTimestamp(timestampString string) (time.Time, []error) {
-	var errs []error = make([]error, 0, 1)
+	errs := make([]error, 0, 1)
 
 	// Validate the timestamp string: must not be empty
 	if timestampString == "" {

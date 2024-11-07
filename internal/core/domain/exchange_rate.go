@@ -33,7 +33,7 @@ func NewExchangeRate(currencyName string, rate float64, dateOfRecord time.Time) 
 
 // ValidateExchangeRate validates the currency name, rate and date of record for the ExchangeRate struct.
 func ValidateExchangeRate(currencyName string, rate float64, dateOfRecord time.Time) []error {
-	var errors []error = make([]error, 0, 3)
+	errors := make([]error, 0, 3)
 
 	// Validate the currency name length: must not be empty
 	if currencyName == "" {

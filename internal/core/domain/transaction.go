@@ -45,7 +45,7 @@ func NewTransaction(description string, timestamp time.Time, amountInUSD float64
 
 // ValidateTransaction validates the description, timestamp and the amount in USD for the Transaction struct.
 func ValidateTransaction(description string, timestamp time.Time, amountInUSD float64) []error {
-	var errors []error = make([]error, 0, 5)
+	errors := make([]error, 0, 5)
 
 	// Aggregate the validation errors
 	errors = append(errors, ValidateDescription(description)...)
@@ -61,7 +61,7 @@ func ValidateTransaction(description string, timestamp time.Time, amountInUSD fl
 
 // ValidateDescription validates the transaction description.
 func ValidateDescription(description string) []error {
-	var errors []error = make([]error, 0, 1)
+	errors := make([]error, 0, 1)
 
 	// Validate the description emptiness: must not be empty
 	if len(description) == 0 {
@@ -78,7 +78,7 @@ func ValidateDescription(description string) []error {
 
 // ValidateAmountInUSD validates the transaction amount in USD.
 func ValidateAmountInUSD(amountInUSD float64) []error {
-	var errors []error = make([]error, 0, 1)
+	errors := make([]error, 0, 1)
 
 	// Validate the amount in USD: must be positive
 	if amountInUSD <= 0 {
