@@ -13,3 +13,10 @@ type TransactionRepository interface {
 	SaveTransaction(transaction domain.Transaction) error
 	FindTransaction(id uuid.UUID) (*domain.Transaction, error)
 }
+
+// TransactionService is the interface that the business logic provides for any adapter that wants to implement
+// user facing transaction saving and retrieval with currency conversion data.
+type TransactionService interface {
+	SaveTransaction(transaction domain.Transaction) error
+	FindTransactionAndExchangeRateFromCurrency(id uuid.UUID, currencyName string) (*domain.Transaction, *domain.ExchangeRate, error)
+}
