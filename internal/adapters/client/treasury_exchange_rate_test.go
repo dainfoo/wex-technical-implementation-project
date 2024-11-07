@@ -37,7 +37,7 @@ func (m *MockHTTPClient) Get(url string) (*http.Response, error) {
 // 4. No Data In Response.
 func TestGetExchangeRate(t *testing.T) {
 	// Expected results
-	var successfulResponseExchangeRate, err = domain.NewExchangeRate("Real", 5.434, time.Date(2024, 9, 30, 0, 0, 0, 0, time.UTC))
+	successfulResponseExchangeRate, err := domain.NewExchangeRate("Real", 5.434, time.Date(2024, 9, 30, 0, 0, 0, 0, time.UTC))
 	// Stops the test if the expected results are not as expected (probably the business logic changed)
 	require.Empty(t, err)
 
@@ -93,7 +93,7 @@ func TestGetExchangeRate(t *testing.T) {
 			mockClient := new(MockHTTPClient)
 			mockClient.On("Get", mock.Anything).Return(tt.mockResponse, tt.mockError)
 
-			treasuryAdapter := client.NewTreasuryExchangeRateAdapter(mockClient)
+			treasuryAdapter := client.NewConcreteTreasuryExchangeRateAdapter(mockClient)
 			actualRate, actualError := treasuryAdapter.GetExchangeRate("Real")
 
 			// Asserts the results

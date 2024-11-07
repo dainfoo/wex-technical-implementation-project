@@ -15,6 +15,12 @@ import (
 
 // This file contains the implementation of the ExchangeRateService	interface using the Treasury API.
 
+// TreasuryExchangeRateAdapter interface defines the behavior for exchange rate fetching.
+// It allows flexibility to change the implementation of the Treasury API client for testing purposes.
+type TreasuryExchangeRateAdapter interface {
+	GetExchangeRate(currency string) (*domain.ExchangeRate, error)
+}
+
 // HTTPClient just wraps te http.Client interface to make it easier to mock in tests.
 type HTTPClient interface {
 	Get(url string) (*http.Response, error)
@@ -27,22 +33,22 @@ const (
 	retryDelay          = 1 * time.Second
 )
 
-// TreasuryExchangeRateAdapter represents a client to the Treasury API.
-type TreasuryExchangeRateAdapter struct {
+// ConcreteTreasuryExchangeRateAdapter is the real implementation of TreasuryExchangeRateAdapter interface.
+type ConcreteTreasuryExchangeRateAdapter struct {
 	client      HTTPClient
 	apiEndpoint string
 }
 
-// NewTreasuryExchangeRateAdapter creates a new TreasuryExchangeRateAdapter with the given HTTPClient.
-func NewTreasuryExchangeRateAdapter(client HTTPClient) *TreasuryExchangeRateAdapter {
-	return &TreasuryExchangeRateAdapter{
+// NewConcreteTreasuryExchangeRateAdapter creates a new ConcreteTreasuryExchangeRateAdapter with the given HTTPClient.
+func NewConcreteTreasuryExchangeRateAdapter(client HTTPClient) *ConcreteTreasuryExchangeRateAdapter {
+	return &ConcreteTreasuryExchangeRateAdapter{
 		client:      client,
 		apiEndpoint: treasuryAPIEndpoint,
 	}
 }
 
 // GetExchangeRate retrieves the most recent exchange rate for a currency with input and response validations.
-func (a *TreasuryExchangeRateAdapter) GetExchangeRate(currencyName string) (*domain.ExchangeRate, error) {
+func (a *ConcreteTreasuryExchangeRateAdapter) GetExchangeRate(currencyName string) (*domain.ExchangeRate, error) {
 	apiURL := buildRequestURL(a, currencyName)
 
 	// Retry mechanism
@@ -66,7 +72,7 @@ func (a *TreasuryExchangeRateAdapter) GetExchangeRate(currencyName string) (*dom
 }
 
 // buildRequestURL constructs the URL for the Treasury API request.
-func buildRequestURL(a *TreasuryExchangeRateAdapter, currencyName string) string {
+func buildRequestURL(a *ConcreteTreasuryExchangeRateAdapter, currencyName string) string {
 	return fmt.Sprintf("%s?&sort=-record_date&format=json&page[number]=1&page[size]=1"+
 		"&fields=currency,exchange_rate,record_date,record_calendar_day,record_calendar_month,record_calendar_year"+
 		"&filter=currency:eq:%s", a.apiEndpoint, url.QueryEscape(currencyName))
