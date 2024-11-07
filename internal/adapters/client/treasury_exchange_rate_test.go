@@ -17,17 +17,6 @@ import (
 // This file contains tests for the Treasury API implementation of the ExchangeRateService interface.
 // It uses Testify for assertions and mocking, and runs the tests in parallel.
 
-// MockHTTPClient is a mock type for HTTPClient interface.
-type MockHTTPClient struct {
-	mock.Mock
-}
-
-// Get is a mock method for HTTPClient interface.
-func (m *MockHTTPClient) Get(url string) (*http.Response, error) {
-	args := m.Called(url)
-	return args.Get(0).(*http.Response), args.Error(1)
-}
-
 // TestGetExchangeRate tests the GetExchangeRate method of the TreasuryExchangeRateAdapter.
 // It tests the following scenarios:
 //
@@ -90,7 +79,7 @@ func TestGetExchangeRate(t *testing.T) {
 			t.Parallel()
 
 			// Creates a mock client
-			mockClient := new(MockHTTPClient)
+			mockClient := new(client.MockTreasuryExchangeRateAdapter)
 			mockClient.On("Get", mock.Anything).Return(tt.mockResponse, tt.mockError)
 
 			treasuryAdapter := client.NewConcreteTreasuryExchangeRateAdapter(mockClient)
